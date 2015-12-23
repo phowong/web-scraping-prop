@@ -1,5 +1,4 @@
 from urllib.request import urlopen
-from urllib.parse import urlparse
 from urllib.error import HTTPError
 from bs4 import BeautifulSoup
 import re
@@ -16,19 +15,6 @@ def getBs(url):
 		#if the server did not exist, html would be a None object, and html.read() would throw an AttributeError
 		return None
 	return bsObj
-
-def getBsFromFile(file1):
-	try:
-		htmlfile = open(file1)
-	except HTTPError as e:
-		return None
-	try:
-		bsObj = BeautifulSoup(htmlfile,"html.parser")
-	except AttributeError as e:
-		#if the server did not exist, html would be a None object, and html.read() would throw an AttributeError
-		return None
-	return bsObj
-
 
 def getExtract(soupObj):
 	try:
@@ -69,45 +55,18 @@ def getExtract(soupObj):
 	print(str(estate_info))
 	return estate_info
 
-def getQueryListFromLink(href):
-	o = urlparse(href)
-	return o.query.split("&")
-
-def getQueryDictFromLink(href):
-	rows = getQueryListFromLink(href)
-	results = {}
-	for row in rows:
-		arr = row.split("=")
-		results[arr[0]]=arr[1]
-	return results
-
-	
-def getExtractDir(soupObj):
-	try:
-		extract = soupObj.find("td",{"class":"bg_content_search"})
-		
-		extract2 = extract.findAll("td",{"width":"150px","height":"30px"})
-
-		results = []
-		for row in extract2:
-			extract3 = row.find("a")
-			# print(getQueryDictFromLink(extract3['href'])['est_id'])
-			results.append(getQueryDictFromLink(extract3['href'])['est_id'])
-	except AttributeError as e:
-	#if the server did not exist, html would be a None object, and html.read() would throw an AttributeError	
-		return None
-	# print(extract3)
-	return results
-
-
-
-
-
 # title = getTitle("http://proptx.midland.com.hk/utx/index.jsp?est_id=E00108&lang=zh")
-soup = getBsFromFile("/Users/pho/git_2015/web-scraping-prop/test_result.html")
-result = getExtractDir(soup)
+soup = getBs("http://app.midland.com.hk/residential_ebook/default.jsp?estId=E00105&lang=zh")
+result = getExtract(soup)
 if result == None:
 	print("Title could not be found")
 else:
-	print(result)
+	try:
+		f = open(sys.argv[1],'wt')
+		# writer = csv.writer(f, delimiter=",",quoting=csv.QUOTE_ALL)
+		writer = csv.writer(f)
+		# writer.writerow([result])
+		writer.writerow([result])
+	finally:
+		f.close()
 
