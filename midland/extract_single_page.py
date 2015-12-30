@@ -1,4 +1,6 @@
-from urllib.request import urlopen
+from http.client import HTTPConnection
+HTTPConnection.debuglevel = 1
+import urllib.request,urllib.parse
 from urllib.error import HTTPError
 from bs4 import BeautifulSoup
 import re
@@ -6,7 +8,13 @@ import csv
 import sys
 def getBs(url):
 	try:
-		html = urlopen(url)
+		headers = {"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit 537.36 (KHTML, like Gecko) Chrome", "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"}
+		d = {}
+		data = urllib.parse.urlencode(d).encode("utf-8")
+		req = urllib.request.Request(url, data, headers)
+		print(type(req))
+		html = urllib.request.urlopen(req)
+		print(type(html))
 	except HTTPError as e:
 		return None
 	try:

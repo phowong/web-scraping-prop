@@ -109,5 +109,9 @@ result = getExtractDir(soup)
 if result == None:
 	print("Title could not be found")
 else:
-	print(result)
-
+	try:
+		f = open(sys.argv[1],'wt')
+		writer = csv.writer(f)
+		writer.writerow([result])
+	finally:
+		f.close()
