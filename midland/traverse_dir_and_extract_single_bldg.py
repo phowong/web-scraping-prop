@@ -1,5 +1,5 @@
 from http.client import HTTPConnection
-HTTPConnection.debuglevel = 1
+# HTTPConnection.debuglevel = 1
 import urllib.request,urllib.parse
 from urllib.request import urlopen
 from urllib.parse import urljoin
@@ -106,49 +106,79 @@ def getDetachedHouseInfo(soupObj):
 	#if the server did not exist, html would be a None object, and html.read() would throw an AttributeError	
 		return None
 	return bldg_info
+def getEstInfo(soupObj):
+	try:
+		extract=(soupObj.find("img",{"src":"http://resources.midland.com.hk/images/ebook/zh_HK/title_pinfo_revamp.jpg"}).parent.parent.parent).next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling.next_sibling
+		# extract = soupObj.find("table",{"style":"background-image: url('http://esfphoto.midland.com.hk/img_wm.php?wm=mr&src=&hwm=Y&w=250&h=150&crop=n'); background-repeat: no-repeat; background-position: 500px 20px;"})
+		extract1 = extract.findAll("tr",{"valign":"TOP"})
+		estate_info = {}
+		for row in extract1:
+			extract2 = row.find("td",{"class":"title"})
+			extract3 = row.find("td",{"class":"content"})
+			estate_info_key = extract2.get_text().strip('：')
+			# estate_info_value = extract3.get_text().strip('\r\n\t')
+			estate_info_value = re.sub(r"\s+","",extract3.get_text())
+			estate_info[estate_info_key] = estate_info_value
+	except AttributeError as e:
+	#if the server did not exist, html would be a None object, and html.read() would throw an AttributeError	
+		return None
+	return estate_info
+
+
+
+def getEstIdFromFile(afile):
+	try:
+		your_list = []
+		f = open(afile,'rt') 
+		mystr = f.read()
+		my_list = mystr.split(",")
+		# reader = csv.reader(f)
+		# for row in reader:
+		# 	your_list.append(row)
+	finally:
+		f.close()
+	print(my_list)
+	return my_list
+
 
 # main starts
 try:
 	f = open(sys.argv[1],'wt')
-	writer = csv.writer(f)
+	writer = csv.writer(f,delimiter=',')
 	# writer.writerow([result])
 
 	# title = getTitle("http://proptx.midland.com.hk/utx/index.jsp?est_id=E00108&lang=zh")
 	# red hill
 	# soup = getBs("http://proptx.midland.com.hk/utx/index.jsp?est_id=E00106&lang=zh")
-	est_id_array=['E00110', 'E07457', 'E00765', 'E00112']
+	# est_id_list=['E00110']
+	est_id_list=['E00110', 'E07457', 'E00765', 'E00112']
+	# est_id_list=getEstIdFromFile(sys.argv[2])
 
-	est_links = [ "http://proptx.midland.com.hk/utx/index.jsp?lang=zh&est_id=" + est_id for est_id in est_id_array]
-
-	for astring in est_links:
-		soup = getBs(astring)
-		# mk
-		# soup = getBs("http://proptx.midland.com.hk/utx/index.jsp?est_id=E000015311&lang=zh")
-
+	est_links = [ "http://proptx.midland.com.hk/utx/index.jsp?lang=zh&est_id=" + est_id for est_id in est_id_list]
+	est_info_links = [ "http://app.midland.com.hk/residential_ebook/default.jsp?lang=zh&estId=" + est_id for est_id in est_id_list]
+	for index in range(len(est_id_list)):
+		moresoup = getBs(est_info_links[index])
+		est_info_extract_dict = getEstInfo(moresoup)
+		soup = getBs(est_links[index])
 		link_list = getBldgLinks(soup)
-		# print(link_list)
-		# dlist = []
-
 		for row in range(len(link_list)):
 			
 			# pretend to be human
 			time.sleep(randint(10,100)/1000+randint(2,5))
 			print('Before: %s' % time.ctime())
-
-			# print(row)
-			# print(link_list[row])
 			input_link = link_list[row]
 
 			is_not_detached_house = re.match("^(http)",input_link)
-
-			# print(input_link)
 			# skip the detached house for now
 			if is_not_detached_house:
-				# input_link = "http://proptx.midland.com.hk/utx/" + input_link
 
 				soup1 = getBs(input_link)
 				test = getBldgInfo(soup1)
+				test.update(est_info_extract_dict)
+				# print(est_info_extract_dict)
+				# print(test)
 				writer.writerow([test])
+				# writer.writerow([test,est_info_extract_dict])
 				# test = getDetachedHouseInfo(soup1)
 				# writer.writerow(json.dumps(test))
 				# print("\n")
@@ -156,8 +186,5 @@ try:
 			else:
 				print("notOK:" )
 				print(getQueryDictFromLink(input_link))
-
-
-
 finally:
 	f.close()
