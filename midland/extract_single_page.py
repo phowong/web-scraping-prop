@@ -12,13 +12,16 @@ def getBs(url):
 		d = {}
 		data = urllib.parse.urlencode(d).encode("utf-8")
 		req = urllib.request.Request(url, data, headers)
-		print(type(req))
+		# print(type(req))
 		html = urllib.request.urlopen(req)
-		print(type(html))
+		# print(type(html))
 	except HTTPError as e:
 		return None
 	try:
-		bsObj = BeautifulSoup(html.read(),"html.parser")
+		# print(html.read())
+		# html2 = (html.read()).decode('big5')
+		# print(html2)
+		bsObj = BeautifulSoup(html.read().decode('big5', 'ignore'),"html.parser")
 	except AttributeError as e:
 		#if the server did not exist, html would be a None object, and html.read() would throw an AttributeError
 		return None
@@ -30,7 +33,7 @@ def getExtract(soupObj):
 		# extract = soupObj.find("table",{"style":"background-image: url('http://esfphoto.midland.com.hk/img_wm.php?wm=mr&src=&hwm=Y&w=250&h=150&crop=n'); background-repeat: no-repeat; background-position: 500px 20px;"})
 		
 		extract1 = extract.findAll("tr",{"valign":"TOP"})
-		# print(extract1)
+		
 		output = ""
 		estate_info = {}
 		for row in extract1:
@@ -38,7 +41,6 @@ def getExtract(soupObj):
 			extract2 = row.find("td",{"class":"title"})
 			extract3 = row.find("td",{"class":"content"})
 			# print(temp_text)
-			print(extract2.get_text())
 			print(extract3.get_text())
 			estate_info_key = extract2.get_text().strip('：')
 			# estate_info_value = extract3.get_text().strip('\r\n\t')
@@ -47,6 +49,7 @@ def getExtract(soupObj):
 
 	except AttributeError as e:
 	#if the server did not exist, html would be a None object, and html.read() would throw an AttributeError	
+		print('went into exception')
 		return None
 	# return extract1
 	print(type(estate_info))
@@ -54,8 +57,14 @@ def getExtract(soupObj):
 	return estate_info
 
 # title = getTitle("http://proptx.midland.com.hk/utx/index.jsp?est_id=E00108&lang=zh")
-soup = getBs("http://app.midland.com.hk/residential_ebook/default.jsp?estId=E00105&lang=zh")
+
+# big5 encoding problem @ dec22
+# soup = getBs("http://app.midland.com.hk/residential_ebook/default.jsp?estId=E04891&lang=zh")
 # soup = getBs("http://app.midland.com.hk/residential_ebook/default.jsp?lang=zh&estId=E00112")
+
+# 對不起, 沒有所需資料!
+soup = getBs("http://app.midland.com.hk/residential_ebook/default.jsp?estId=E11432&lang=zh")
+
 result = getExtract(soup)
 if result == None:
 	print("Title could not be found")

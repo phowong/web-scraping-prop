@@ -38,7 +38,7 @@ def getBs(url):
 	except HTTPError as e:
 		return None
 	try:
-		bsObj = BeautifulSoup(html.read(),"html.parser")
+		bsObj = BeautifulSoup(html.read().decode('big5', 'ignore'),"html.parser")
 	except AttributeError as e:
 		#if the server did not exist, html would be a None object, and html.read() would throw an AttributeError
 		return None
@@ -143,16 +143,18 @@ def getEstIdFromFile(afile):
 
 # main starts
 try:
+	error_log = open(sys.argv[3],'wt')
 	f = open(sys.argv[1],'wt')
 	writer = csv.writer(f,delimiter=',')
+	writer_error_log = csv.writer(error_log)
 	# writer.writerow([result])
 
 	# title = getTitle("http://proptx.midland.com.hk/utx/index.jsp?est_id=E00108&lang=zh")
 	# red hill
 	# soup = getBs("http://proptx.midland.com.hk/utx/index.jsp?est_id=E00106&lang=zh")
 	# est_id_list=['E00110']
-	est_id_list=['E00110', 'E07457', 'E00765', 'E00112']
-	# est_id_list=getEstIdFromFile(sys.argv[2])
+	# est_id_list=['E00110', 'E07457', 'E00765', 'E00112','E00106','E11432']
+	est_id_list=getEstIdFromFile(sys.argv[2])
 
 	est_links = [ "http://proptx.midland.com.hk/utx/index.jsp?lang=zh&est_id=" + est_id for est_id in est_id_list]
 	est_info_links = [ "http://app.midland.com.hk/residential_ebook/default.jsp?lang=zh&estId=" + est_id for est_id in est_id_list]
@@ -174,7 +176,8 @@ try:
 
 				soup1 = getBs(input_link)
 				test = getBldgInfo(soup1)
-				test.update(est_info_extract_dict)
+				if est_info_extract_dict:
+					test.update(est_info_extract_dict)
 				# print(est_info_extract_dict)
 				# print(test)
 				writer.writerow([test])
@@ -184,7 +187,10 @@ try:
 				# print("\n")
 				print(test)
 			else:
+				writer_error_log.writerow([input_link])
 				print("notOK:" )
+				# writer_error_log.writerow([getQueryDictFromLink(input_link)])
 				print(getQueryDictFromLink(input_link))
+		time.sleep(randint(10,100)/1000+randint(3,7))
 finally:
 	f.close()
