@@ -27,18 +27,17 @@ def getQueryDictFromLink(href):
 	return results
 def getBs(url):
 	try:
-		headers = {"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit 537.36 (KHTML, like Gecko) Chrome", "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"}
+		headers = {"User-Agent":"Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36", "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"}
+		# headers = {"User-Agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_9_5) AppleWebKit 537.36 (KHTML, like Gecko) Chrome", "Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8"}
 		d = {}
 		data = urllib.parse.urlencode(d).encode("utf-8")
 		req = urllib.request.Request(url, data, headers)
-		# print(type(req))
 		html = urllib.request.urlopen(req)
-		# print(type(html))
-		# html = urlopen(url)
 	except HTTPError as e:
 		return None
 	try:
-		bsObj = BeautifulSoup(html.read().decode('big5', 'ignore'),"html.parser")
+		bsObj = BeautifulSoup(html.read().decode('big5', 'replace'),"html.parser")
+		# bsObj = BeautifulSoup(html.read().decode('big5', 'ignore'),"html.parser")
 	except AttributeError as e:
 		#if the server did not exist, html would be a None object, and html.read() would throw an AttributeError
 		return None
@@ -77,6 +76,7 @@ def getBldgInfo(soupObj):
 		
 		extract2 = [v.split(":",1) for v in extract1]
 		bldg_info["bldg_name"]=re.sub(r"\s+","",bldg_name)
+		bldg_info['bldg_name'] = re.sub(r'(.+?)\1+', r'\1', bldg_info['bldg_name'])
 		for row in extract2:
 			bldg_info[row[0]]=row[1]
 
@@ -99,6 +99,8 @@ def getDetachedHouseInfo(soupObj):
 		
 		extract2 = [v.split(":",1) for v in extract1]
 		bldg_info["bldg_name"]=re.sub(r"\s+","",bldg_name)
+		
+
 		for row in extract2:
 			bldg_info[row[0]]=row[1]
 
@@ -117,7 +119,8 @@ def getEstInfo(soupObj):
 			extract3 = row.find("td",{"class":"content"})
 			estate_info_key = extract2.get_text().strip('：')
 			# estate_info_value = extract3.get_text().strip('\r\n\t')
-			estate_info_value = re.sub(r"\s+","",extract3.get_text())
+			extract3text = re.sub(r"[\r\n\t]+","",extract3.get_text())
+			estate_info_value = re.sub('[\xa0\u3000]+',' ',extract3text)
 			estate_info[estate_info_key] = estate_info_value
 	except AttributeError as e:
 	#if the server did not exist, html would be a None object, and html.read() would throw an AttributeError	
@@ -139,11 +142,24 @@ def getEstIdFromFile(afile):
 		f.close()
 	print(my_list)
 	return my_list
-
+def hasInfoAval(soupObj):
+	try:
+		extract1 = soupObj.findAll("div",{"align":"center"})
+		for row in extract1:
+			if re.match("^(對不起)",row.get_text()):
+				return False
+		return True
+	except AttributeError as e:
+		print("went into Error")
+		print(soupObj)
+		return False
 
 # main starts
 try:
-	error_log = open(sys.argv[3],'wt')
+	# for debug
+	# error_log = open(sys.argv[2],'at')
+	
+	error_log = open(sys.argv[3],'at')
 	f = open(sys.argv[1],'wt')
 	writer = csv.writer(f,delimiter=',')
 	writer_error_log = csv.writer(error_log)
@@ -152,7 +168,8 @@ try:
 	# title = getTitle("http://proptx.midland.com.hk/utx/index.jsp?est_id=E00108&lang=zh")
 	# red hill
 	# soup = getBs("http://proptx.midland.com.hk/utx/index.jsp?est_id=E00106&lang=zh")
-	# est_id_list=['E00110']
+	# est_id_list=['E08550']
+	# est_id_list=['E00110','E12581']
 	# est_id_list=['E00110', 'E07457', 'E00765', 'E00112','E00106','E11432']
 	est_id_list=getEstIdFromFile(sys.argv[2])
 
@@ -160,9 +177,13 @@ try:
 	est_info_links = [ "http://app.midland.com.hk/residential_ebook/default.jsp?lang=zh&estId=" + est_id for est_id in est_id_list]
 	for index in range(len(est_id_list)):
 		moresoup = getBs(est_info_links[index])
-		est_info_extract_dict = getEstInfo(moresoup)
+		est_info_extract_dict = None
+		if(hasInfoAval(moresoup)):
+			est_info_extract_dict = getEstInfo(moresoup)
 		soup = getBs(est_links[index])
 		link_list = getBldgLinks(soup)
+		# debug
+		# print(len(soup))
 		for row in range(len(link_list)):
 			
 			# pretend to be human
@@ -176,6 +197,7 @@ try:
 
 				soup1 = getBs(input_link)
 				test = getBldgInfo(soup1)
+				test.update({"est_id":est_id_list[index]})
 				if est_info_extract_dict:
 					test.update(est_info_extract_dict)
 				# print(est_info_extract_dict)
@@ -191,6 +213,6 @@ try:
 				print("notOK:" )
 				# writer_error_log.writerow([getQueryDictFromLink(input_link)])
 				print(getQueryDictFromLink(input_link))
-		time.sleep(randint(10,100)/1000+randint(3,7))
+		# time.sleep(randint(10,100)/1000+randint(3,7))
 finally:
 	f.close()
